@@ -1,0 +1,12 @@
+[
+  { "id": 9001, "descricaoProduto": "Café especial 250 g", "precoLiquido": 19.90, "quantidadeEstoque": 20 },
+  { "id": 9002, "descricaoProduto": "Caneca de cerâmica", "precoLiquido": 39.90, "quantidadeEstoque": 12 },
+  { "id": 9003, "descricaoProduto": "Garrafa térmica 500 ml", "precoLiquido": 79.90, "quantidadeEstoque": 8 },
+  { "id": 9004, "descricaoProduto": "Caderno pontilhado", "precoLiquido": 24.50, "quantidadeEstoque": 15 },
+  { "id": 9005, "descricaoProduto": "Kit de canetas coloridas", "precoLiquido": 14.90, "quantidadeEstoque": 30 },
+  { "id": 9006, "descricaoProduto": "Fone de ouvido sem fio", "precoLiquido": 149.90, "quantidadeEstoque": 6 },
+  { "id": 9007, "descricaoProduto": "Luminária de mesa", "precoLiquido": 89.90, "quantidadeEstoque": 4 },
+  { "id": 9008, "descricaoProduto": "Ecobag de algodão", "precoLiquido": 29.90, "quantidadeEstoque": 10 },
+  { "id": 9009, "descricaoProduto": "Organizador de mesa", "precoLiquido": 49.90, "quantidadeEstoque": 0 },
+  { "id": 9010, "descricaoProduto": "Mouse sem fio", "precoLiquido": 59.90, "quantidadeEstoque": 1 }
+]

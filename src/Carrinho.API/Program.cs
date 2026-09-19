@@ -20,10 +20,17 @@ builder.Services.AddInfrastructure(
     ?? throw new InvalidOperationException("Configure ConnectionStrings:Carrinho via user-secrets ou variável de ambiente."));
 
 var app = builder.Build();
-if (args.Contains("--migrate"))
+if (args.Contains("--migrate") || args.Contains("--seed-demo"))
 {
     await using var scope = app.Services.CreateAsyncScope();
-    await scope.ServiceProvider.GetRequiredService<CarrinhoDbContext>().Database.MigrateAsync();
+    var db = scope.ServiceProvider.GetRequiredService<CarrinhoDbContext>();
+    await db.Database.MigrateAsync();
+    if (args.Contains("--seed-demo"))
+    {
+        await using var file = File.OpenRead(Path.Combine(AppContext.BaseDirectory, "Data", "demo-produtos.json"));
+        var inserted = await DemoCatalogSeeder.SeedAsync(db, file);
+        app.Logger.LogInformation("Catálogo de demonstração: {Inserted} produtos inseridos. Registros existentes preservados.", inserted);
+    }
     return;
 }
 

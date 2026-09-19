@@ -21,4 +21,8 @@
     <ProjectReference Include="..\Carrinho.Infrastructure\Carrinho.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Update="Data/demo-produtos.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

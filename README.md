@@ -14,6 +14,23 @@ Inclui CRUD de produtos e cupons, gerenciamento de carrinhos, itens, descontos e
 Dependências: Application → Core; Infrastructure → Application/Core; API → Application/Infrastructure.
 A API referencia Infrastructure para compor a injeção de dependência. Controllers usam casos de uso.
 
+### Arquitetura da solução completa
+
+```mermaid
+flowchart LR
+    Browser[React + TypeScript] -->|HTTP /api| Nginx[Nginx: front-end]
+    Nginx --> API[ASP.NET Core: controllers]
+    API --> Application[Application: casos de uso e DTOs]
+    Application --> Core[Core: entidades e regras]
+    Application --> Contracts[Interfaces de repositórios]
+    Infrastructure[Infrastructure: EF Core] -. implementa .-> Contracts
+    Infrastructure --> DB[(PostgreSQL)]
+```
+
+O back-end usa uma arquitetura em camadas com princípios de DDD: `CarrinhoCompra` é a raiz do agregado e controla itens, cupom, cálculos e finalização. Controllers recebem requisições e chamam casos de uso; não acessam diretamente o banco. A infraestrutura implementa os contratos de persistência. A composição das dependências fica em `Program.cs`.
+
+O front-end usa componentes React como apresentação, interfaces TypeScript como modelos, hooks/controllers para coordenar estado e serviços para HTTP. A API é a fonte dos totais e das validações de estoque. O PostgreSQL usa volume persistente; `migrate` prepara o schema antes de a API iniciar.
+
 ## Abrir no Visual Studio
 
 Abra `Carrinho.sln`, com suporte ao SDK .NET 10 instalado, e selecione `Carrinho.API` como projeto de inicialização.
@@ -45,9 +62,51 @@ cd back-end
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 # Configure POSTGRES_PASSWORD no .env antes da primeira inicialização.
 docker compose -f compose.yaml -f compose.frontend.yaml up --build -d
+docker compose run --rm migrate --seed-demo
 ```
 
-Se os projetos já estão baixados, execute apenas o último comando na pasta `back-end`.
+Se os projetos já estão baixados, execute os dois últimos comandos na pasta `back-end`. O segundo é opcional e insere os dados fictícios de demonstração.
+
+### Dados de demonstração
+
+O arquivo `src/Carrinho.API/Data/demo-produtos.json` contém **10 produtos fictícios**, identificados pelos IDs 9001 a 9010. Esses dados não substituem `produtos.json` e `cupons.json` oficiais do desafio, ainda não fornecidos.
+
+```powershell
+# Com o banco iniciado e a imagem atualizada:
+docker compose run --rm migrate --seed-demo
+
+# Alternativa local, com connection string configurada por user-secrets:
+dotnet run --project src/Carrinho.API -- --seed-demo
+```
+
+O comando aplica migrations pendentes e insere somente IDs ausentes em uma transação. Pode ser repetido: não duplica registros, não sobrescreve preços e não repõe estoque consumido. Se um ID já existir, ele é preservado mesmo que seus dados sejam diferentes. O seed não roda automaticamente ao iniciar a API.
+
+| ID | Produto | Preço inicial | Estoque inicial |
+|---|---|---:|---:|
+| 9001 | Café especial 250 g | R$ 19,90 | 20 |
+| 9002 | Caneca de cerâmica | R$ 39,90 | 12 |
+| 9003 | Garrafa térmica 500 ml | R$ 79,90 | 8 |
+| 9004 | Caderno pontilhado | R$ 24,50 | 15 |
+| 9005 | Kit de canetas coloridas | R$ 14,90 | 30 |
+| 9006 | Fone de ouvido sem fio | R$ 149,90 | 6 |
+| 9007 | Luminária de mesa | R$ 89,90 | 4 |
+| 9008 | Ecobag de algodão | R$ 29,90 | 10 |
+| 9009 | Organizador de mesa | R$ 49,90 | 0 |
+| 9010 | Mouse sem fio | R$ 59,90 | 1 |
+
+Os cupons `10OFF` e `15OFF` são criados pelas migrations. O seed não recria cupons removidos nem altera os que já foram editados.
+
+### Roteiro para testar pela loja
+
+1. Abra http://localhost:3000 e clique em **Atualizar** se a página já estava aberta.
+2. Adicione dois cafés (9001) e uma caneca (9002): subtotal **R$ 79,70**.
+3. Aplique `10OFF`: desconto **R$ 7,97**, total **R$ 71,73**.
+4. Troque por `15OFF`: desconto **R$ 11,96**, total **R$ 67,74**.
+5. Remova o cupom e altere as quantidades para conferir o recálculo.
+6. O organizador (9009) aparece sem estoque; o mouse (9010) permite apenas uma unidade.
+7. Finalize e confira o bloqueio do carrinho e a baixa de estoque. Use **Começar nova compra** para repetir.
+
+Os valores esperados pressupõem o catálogo inicial e cupons sem alterações. Para repor um estoque durante seus testes, use o PUT de produtos no Swagger; repetir o seed preserva o estoque atual.
 
 | Serviço | Endereço |
 |---|---|
@@ -125,7 +184,7 @@ No perfil `http`, a API fica em `http://localhost:5269`.
 
 Exemplos no arquivo `src/Carrinho.API/Carrinho.API.http`.
 Swagger UI está disponível em `http://localhost:8080/swagger` pelo Docker ou `http://localhost:5269/swagger` pelo perfil HTTP. Use **Try it out** e **Execute** para consultar os endpoints. A interface utiliza o documento `/openapi/v1.json`.
-O catálogo começa vazio: cadastre produtos pelo Swagger ou importe posteriormente os dados oficiais.
+O catálogo começa vazio se o seed opcional não for executado. Você também pode cadastrar produtos pelo Swagger ou pela loja.
 
 ## Regras e decisões
 
@@ -173,7 +232,7 @@ O ambiente de teste tem banco próprio e API na porta 18080; não usa o volume d
 
 ## Próximas etapas
 
-- Importar `produtos.json` e `cupons.json` originais, ainda não fornecidos; nenhum catálogo fictício foi criado.
+- Importar `produtos.json` e `cupons.json` originais, ainda não fornecidos. O catálogo de demonstração é explicitamente fictício.
 - Implementar autenticação. Os endpoints atuais ainda não exigem credenciais.
 - Evoluir o front-end integrado: catálogo, carrinho, cupom e checkout já estão disponíveis via Nginx, sem necessidade de CORS na execução conjunta.
 - Preparar a implantação EC2 com Nginx, HTTPS, ambiente Production, segredos e backups.
@@ -190,4 +249,4 @@ O front-end será mantido no repositório separado informado pelo usuário.
 - Sintaxe do Compose validada e migration inicial gerada.
 - Containers compilados e iniciados com Docker Compose; PostgreSQL saudável e migration inicial aplicada com sucesso (serviço migrate encerrado com código 0).
 - Com banco real, `/health/live`, `/health/ready`, `/api/produtos` e `/openapi/v1.json` responderam 200 em `http://localhost:8080`.
-- O catálogo retornou `[]`, conforme esperado antes da importação dos dados oficiais.
+- Catálogo de demonstração disponível via comando explícito `--seed-demo`, separado dos dados oficiais.
