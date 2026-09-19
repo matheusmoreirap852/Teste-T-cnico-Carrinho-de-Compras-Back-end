@@ -1,7 +1,7 @@
 # Carrinho de Compras — API
 
-Estrutura inicial em C# / .NET 10, ASP.NET Core e PostgreSQL via Entity Framework Core.
-Esta etapa cria a base arquitetural; ainda não é a implementação completa do desafio.
+API em C# / .NET 10, ASP.NET Core e PostgreSQL via Entity Framework Core.
+Inclui CRUD de produtos e cupons, gerenciamento de carrinhos, itens, descontos e checkout.
 
 ## Camadas
 
@@ -47,11 +47,23 @@ dotnet run --project src/Carrinho.API --launch-profile http
 Use a mesma senha, usuário e banco configurados no `.env`. Senhas não são versionadas.
 No perfil `http`, a API fica em `http://localhost:5269`.
 
-## Endpoints desta etapa
+## Endpoints
 
 | Método | Rota | Objetivo |
 |---|---|---|
 | GET | `/api/produtos` | Lista produtos persistidos, com preço e estoque |
+| POST | `/api/produtos` | Cadastra produto com ID informado |
+| GET / PUT / DELETE | `/api/produtos/{id}` | Consulta, atualiza ou exclui produto |
+| GET / POST | `/api/cupons` | Lista ou cadastra cupons |
+| GET / PUT / DELETE | `/api/cupons/{id}` | Consulta, atualiza ou exclui cupom |
+| POST | `/api/carrinhos` | Cria carrinho aberto com UUID |
+| GET | `/api/carrinhos?pagina=1&tamanho=20` | Lista carrinhos, até 100 por página |
+| GET / DELETE | `/api/carrinhos/{id}` | Consulta ou exclui carrinho aberto |
+| POST | `/api/carrinhos/{id}/itens` | Adiciona produto ou soma quantidade |
+| PUT | `/api/carrinhos/{id}/itens/{produtoId}` | Substitui a quantidade do item |
+| DELETE | `/api/carrinhos/{id}/itens/{produtoId}` | Remove o item |
+| PUT / DELETE | `/api/carrinhos/{id}/cupom` | Aplica/troca ou remove cupom |
+| POST | `/api/carrinhos/{id}/checkout` | Finaliza e baixa o estoque |
 | GET | `/health/live` | Verifica se o processo responde |
 | GET | `/health/ready` | Verifica acesso à tabela Produto; retorna 503 se indisponível |
 | GET | `/openapi/v1.json` | Documento OpenAPI, somente em Development |
@@ -59,7 +71,23 @@ No perfil `http`, a API fica em `http://localhost:5269`.
 
 Exemplos no arquivo `src/Carrinho.API/Carrinho.API.http`.
 Swagger UI está disponível em `http://localhost:8080/swagger` pelo Docker ou `http://localhost:5269/swagger` pelo perfil HTTP. Use **Try it out** e **Execute** para consultar os endpoints. A interface utiliza o documento `/openapi/v1.json`.
-O catálogo retorna uma lista vazia até a importação dos dados oficiais.
+O catálogo começa vazio: cadastre produtos pelo Swagger ou importe posteriormente os dados oficiais.
+
+## Regras e decisões
+
+- A primeira inclusão cria o item com quantidade **1**, conforme o enunciado. Inclusões seguintes somam a quantidade enviada. A quantidade enviada também precisa ser positiva e não exceder o estoque.
+- `PUT` no item substitui a quantidade. Produtos sem estoque não podem ser adicionados.
+- Um único cupom pode estar aplicado; aplicar outro substitui o anterior. Códigos são normalizados para maiúsculas.
+- Os cupons `10OFF` e `15OFF` são cadastrados pela migration com IDs provisórios 1 e 2, usando os percentuais do PDF. Os IDs devem ser conferidos com `cupons.json` quando fornecido.
+- Preço e descrição do item são preservados no momento da primeira inclusão. O percentual e código do cupom são preservados no momento da aplicação. Edições posteriores no catálogo não mudam os valores de carrinhos existentes; reaplicar um cupom usa os dados atuais.
+- Totais são derivados dos itens persistidos e do percentual aplicado, evitando colunas redundantes. Desconto é arredondado para duas casas decimais, com ponto médio afastado de zero.
+- Estoque não é reservado ao adicionar. No checkout, todas as quantidades são revalidadas e o estoque é baixado na mesma transação que finaliza o carrinho.
+- Concorrência otimista usa `xmin` no PostgreSQL para produtos/cupons e uma versão no agregado Carrinho. Operações conflitantes retornam 409; consulte novamente antes de tentar de novo. A transação impede baixa parcial e venda duplicada da última unidade.
+- Carrinho vazio não pode ser finalizado. Carrinho finalizado não aceita alterações, exclusão ou novo checkout.
+- Produtos e cupons vinculados a carrinhos não podem ser excluídos. A restrição preserva a integridade e o histórico.
+- Erros usam Problem Details: 400 para corpo inválido, 404 para recurso inexistente, 409 para conflito e 422 para regra de negócio. Criação retorna 201 e exclusão de cadastro/carrinho retorna 204.
+
+O carrinho é atualizado por operações específicas de itens e cupom; não há um PUT genérico que permita sobrescrever totais ou status.
 
 ## Testes e migrations
 
@@ -72,10 +100,23 @@ dotnet ef migrations add NomeDaMigration --project src/Carrinho.Infrastructure -
 Para criar migrations, configure a connection string por user-secrets conforme acima.
 Valores monetários usam `decimal` e a coluna de preço usa `numeric(18,2)`.
 
+### Integração com PostgreSQL isolado
+
+Requer Python 3 e imagens construídas pelo Compose principal. Execute a partir da raiz:
+
+```powershell
+docker compose build
+docker compose -p carrinho-tests -f compose.integration.yaml up -d
+# Aguarde http://localhost:18080/health/ready responder 200.
+python tests/integration.py
+docker compose -p carrinho-tests -f compose.integration.yaml down -v
+```
+
+O ambiente de teste tem banco próprio e API na porta 18080; não usa o volume de desenvolvimento. O script cria dados temporários e verifica CRUD, cálculos, erros, bloqueio após checkout e disputa concorrente pela última unidade. O último comando remove somente os containers e volumes desse ambiente de teste.
+
 ## Próximas etapas
 
 - Importar `produtos.json` e `cupons.json` originais, ainda não fornecidos; nenhum catálogo fictício foi criado.
-- Implementar agregado Carrinho, itens, cupons, estoque, cálculos e checkout, com migrations e testes.
 - Implementar autenticação. Os endpoints atuais ainda não exigem credenciais.
 - Integrar o front-end e configurar a política de origem se necessária.
 - Preparar a implantação EC2 com Nginx, HTTPS, ambiente Production, segredos e backups.
@@ -85,7 +126,8 @@ O front-end será mantido no repositório separado informado pelo usuário.
 
 ## Validação desta etapa
 
-- Compilação da solução e três testes unitários aprovados.
+- Compilação da solução e 13 testes unitários aprovados.
+- 59 verificações HTTP aprovadas com PostgreSQL isolado, incluindo checkout concorrente.
 - API iniciada localmente: saúde e OpenAPI responderam 200.
 - Sem banco disponível: readiness respondeu 503 e catálogo respondeu 500 em Problem Details, sem expor detalhes internos.
 - Sintaxe do Compose validada e migration inicial gerada.

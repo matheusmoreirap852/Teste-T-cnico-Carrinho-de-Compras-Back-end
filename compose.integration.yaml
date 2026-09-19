@@ -1,0 +1,30 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: carrinho_tests
+      POSTGRES_USER: tests
+      POSTGRES_PASSWORD: disposable-test-password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tests -d carrinho_tests"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+  migrate:
+    image: carrinho-migrate:latest
+    command: ["--migrate"]
+    environment:
+      ConnectionStrings__Carrinho: "Host=db;Database=carrinho_tests;Username=tests;Password=disposable-test-password"
+    depends_on:
+      db:
+        condition: service_healthy
+  api:
+    image: carrinho-api:latest
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Carrinho: "Host=db;Database=carrinho_tests;Username=tests;Password=disposable-test-password"
+    ports:
+      - "127.0.0.1:18080:8080"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully

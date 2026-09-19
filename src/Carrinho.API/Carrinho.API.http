@@ -1,4 +1,7 @@
-@baseUrl = http://localhost:5269
+@baseUrl = http://localhost:8080
+@produtoId = 100
+# Substitua pelo id retornado no POST /api/carrinhos.
+@carrinhoId = 00000000-0000-0000-0000-000000000000
 
 GET {{baseUrl}}/health/live
 
@@ -10,3 +13,63 @@ GET {{baseUrl}}/api/produtos
 
 ### Documento OpenAPI (Development)
 GET {{baseUrl}}/openapi/v1.json
+
+### Cadastrar produto de exemplo manualmente
+POST {{baseUrl}}/api/produtos
+Content-Type: application/json
+
+{"id":100,"descricaoProduto":"Produto de exemplo","precoLiquido":19.99,"quantidadeEstoque":10}
+
+### Consultar produto
+GET {{baseUrl}}/api/produtos/{{produtoId}}
+
+### Atualizar produto
+PUT {{baseUrl}}/api/produtos/{{produtoId}}
+Content-Type: application/json
+
+{"descricaoProduto":"Produto de exemplo","precoLiquido":19.99,"quantidadeEstoque":20}
+
+### Consultar cupons
+GET {{baseUrl}}/api/cupons
+
+### Criar carrinho e copiar o id para carrinhoId
+POST {{baseUrl}}/api/carrinhos
+
+### Listar carrinhos
+GET {{baseUrl}}/api/carrinhos?pagina=1&tamanho=20
+
+### Adicionar item
+POST {{baseUrl}}/api/carrinhos/{{carrinhoId}}/itens
+Content-Type: application/json
+
+{"produtoId":100,"quantidade":1}
+
+### Substituir quantidade
+PUT {{baseUrl}}/api/carrinhos/{{carrinhoId}}/itens/{{produtoId}}
+Content-Type: application/json
+
+{"quantidade":3}
+
+### Aplicar cupom
+PUT {{baseUrl}}/api/carrinhos/{{carrinhoId}}/cupom
+Content-Type: application/json
+
+{"codigoCupom":"10OFF"}
+
+### Consultar totais
+GET {{baseUrl}}/api/carrinhos/{{carrinhoId}}
+
+### Remover cupom
+DELETE {{baseUrl}}/api/carrinhos/{{carrinhoId}}/cupom
+
+### Finalizar (bloqueia alterações e baixa estoque)
+POST {{baseUrl}}/api/carrinhos/{{carrinhoId}}/checkout
+
+### Remover item (somente carrinho aberto)
+DELETE {{baseUrl}}/api/carrinhos/{{carrinhoId}}/itens/{{produtoId}}
+
+### Excluir carrinho (somente aberto)
+DELETE {{baseUrl}}/api/carrinhos/{{carrinhoId}}
+
+### Excluir produto (somente sem vínculos)
+DELETE {{baseUrl}}/api/produtos/{{produtoId}}
