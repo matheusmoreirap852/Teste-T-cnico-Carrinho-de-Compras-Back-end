@@ -11,9 +11,11 @@ public sealed class CarrinhosController(CarrinhosService service) : ControllerBa
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<CarrinhoResponse>>> Listar(CancellationToken ct, int pagina = 1, int tamanho = 20)
         => Ok(await service.ListarAsync(pagina, tamanho, ct));
+
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<CarrinhoResponse>> Obter(Guid id, CancellationToken ct)
         => Ok(await service.ObterAsync(id, ct));
+
     [HttpPost]
     [ProducesResponseType<CarrinhoResponse>(201)]
     public async Task<ActionResult<CarrinhoResponse>> Criar(CancellationToken ct)
