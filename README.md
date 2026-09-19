@@ -93,12 +93,15 @@ O carrinho é atualizado por operações específicas de itens e cupom; não há
 
 ```powershell
 dotnet test Carrinho.sln
+dotnet test Carrinho.sln --collect:"XPlat Code Coverage" --logger "trx;LogFileName=unitarios.trx" --results-directory TestResults
 dotnet tool restore
 dotnet ef migrations add NomeDaMigration --project src/Carrinho.Infrastructure --startup-project src/Carrinho.API --output-dir Persistence/Migrations
 ```
 
 Para criar migrations, configure a connection string por user-secrets conforme acima.
 Valores monetários usam `decimal` e a coluna de preço usa `numeric(18,2)`.
+
+Os testes unitários usam dados fictícios e um repositório simulado, sem conectar ao banco ou precisar do Docker. No Visual Studio, abra **Teste > Gerenciador de Testes > Executar Todos**. Consulte `tests/Carrinho.UnitTests/README.md` para os cenários e limites da validação.
 
 ### Integração com PostgreSQL isolado
 
@@ -126,7 +129,7 @@ O front-end será mantido no repositório separado informado pelo usuário.
 
 ## Validação desta etapa
 
-- Compilação da solução e 13 testes unitários aprovados.
+- 89 testes unitários aprovados, sem falhas ou testes ignorados. Cobertura de linhas: Core 97,76% e Application 98,43%; cobertura de ramificações: 100% em ambas as camadas. Esses percentuais não incluem API ou Infrastructure.
 - 59 verificações HTTP aprovadas com PostgreSQL isolado, incluindo checkout concorrente.
 - API iniciada localmente: saúde e OpenAPI responderam 200.
 - Sem banco disponível: readiness respondeu 503 e catálogo respondeu 500 em Problem Details, sem expor detalhes internos.
