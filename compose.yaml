@@ -1,0 +1,37 @@
+name: carrinho
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-carrinho}
+      POSTGRES_USER: ${POSTGRES_USER:-carrinho}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Configure POSTGRES_PASSWORD no arquivo .env}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  migrate:
+    build: .
+    command: ["--migrate"]
+    environment:
+      ConnectionStrings__Carrinho: "Host=db;Database=${POSTGRES_DB:-carrinho};Username=${POSTGRES_USER:-carrinho};Password=${POSTGRES_PASSWORD}"
+    depends_on:
+      db:
+        condition: service_healthy
+  api:
+    build: .
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Carrinho: "Host=db;Database=${POSTGRES_DB:-carrinho};Username=${POSTGRES_USER:-carrinho};Password=${POSTGRES_PASSWORD}"
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+volumes:
+  postgres_data:

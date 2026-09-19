@@ -1,0 +1,12 @@
+@baseUrl = http://localhost:5269
+
+GET {{baseUrl}}/health/live
+
+### Verifica banco e schema
+GET {{baseUrl}}/health/ready
+
+### Catálogo (vazio até importar produtos.json)
+GET {{baseUrl}}/api/produtos
+
+### Documento OpenAPI (Development)
+GET {{baseUrl}}/openapi/v1.json
