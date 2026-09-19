@@ -12,6 +12,9 @@ builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddScoped<ListarProdutos>();
+builder.Services.AddScoped<ProdutosService>();
+builder.Services.AddScoped<CuponsService>();
+builder.Services.AddScoped<CarrinhosService>();
 builder.Services.AddInfrastructure(
     builder.Configuration.GetConnectionString("Carrinho")
     ?? throw new InvalidOperationException("Configure ConnectionStrings:Carrinho via user-secrets ou variável de ambiente."));

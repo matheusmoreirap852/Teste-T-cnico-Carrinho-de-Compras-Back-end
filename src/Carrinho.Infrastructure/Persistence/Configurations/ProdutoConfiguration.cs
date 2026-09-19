@@ -14,6 +14,7 @@ public sealed class ProdutoConfiguration : IEntityTypeConfiguration<Produto>
             table.HasCheckConstraint("CK_Produto_QuantidadeEstoque", "\"QuantidadeEstoque\" >= 0");
         });
         builder.HasKey(p => p.Id);
+        builder.Property<uint>("xmin").IsRowVersion();
         builder.Property(p => p.Id).HasColumnName("ID").ValueGeneratedNever();
         builder.Property(p => p.DescricaoProduto).IsRequired();
         builder.Property(p => p.PrecoLiquido).HasPrecision(18, 2);

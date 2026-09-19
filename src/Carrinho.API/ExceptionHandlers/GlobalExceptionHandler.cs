@@ -8,13 +8,25 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
 {
     public async ValueTask<bool> TryHandleAsync(HttpContext context, Exception exception, CancellationToken cancellationToken)
     {
-        var isDomainError = exception is DomainException;
+        var isDomainError = exception is DomainException or NotFoundException or ConflictException;
         if (!isDomainError) logger.LogError(exception, "Falha ao processar a requisição.");
-        context.Response.StatusCode = isDomainError ? 422 : 500;
+        context.Response.StatusCode = exception switch
+        {
+            NotFoundException => 404,
+            ConflictException => 409,
+            DomainException => 422,
+            _ => 500
+        };
         await context.Response.WriteAsJsonAsync(new ProblemDetails
         {
             Status = context.Response.StatusCode,
-            Title = isDomainError ? "Regra de negócio inválida" : "Erro interno",
+            Title = exception switch
+            {
+                NotFoundException => "Recurso não encontrado",
+                ConflictException => "Conflito de operação",
+                DomainException => "Regra de negócio inválida",
+                _ => "Erro interno"
+            },
             Detail = isDomainError ? exception.Message : "Não foi possível concluir a operação.",
             Extensions = { ["traceId"] = context.TraceIdentifier }
         }, options: (System.Text.Json.JsonSerializerOptions?)null,

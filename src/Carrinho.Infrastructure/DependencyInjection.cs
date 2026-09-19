@@ -12,6 +12,7 @@ public static class DependencyInjection
     {
         services.AddDbContext<CarrinhoDbContext>(options => options.UseNpgsql(connectionString));
         services.AddScoped<IProdutoRepository, ProdutoRepository>();
+        services.AddScoped<ILojaRepository, LojaRepository>();
         return services;
     }
 }
