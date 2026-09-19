@@ -1,0 +1,9 @@
+# Interface contra o banco descartável da suíte de integração.
+services:
+  web:
+    image: carrinho-web:latest
+    ports:
+      - "127.0.0.1:13000:80"
+    depends_on:
+      api:
+        condition: service_started

@@ -1,0 +1,12 @@
+# Use com compose.yaml. Os repositórios devem estar em pastas irmãs:
+# back-end/ e front-end/.
+services:
+  web:
+    build:
+      context: ../front-end
+    ports:
+      - "127.0.0.1:3000:80"
+    depends_on:
+      api:
+        condition: service_started
+    restart: unless-stopped

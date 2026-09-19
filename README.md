@@ -24,7 +24,7 @@ No VS Code, abra a pasta raiz deste repositório.
 Requer Docker com suporte a containers Linux e Docker Compose v2.
 
 ```powershell
-Copy-Item .env.example .env
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 # Edite a senha em .env antes de continuar.
 docker compose up --build -d
 ```
@@ -33,6 +33,60 @@ O serviço `migrate` aplica as migrations e termina antes da API iniciar.
 A API fica em `http://localhost:8080`; o PostgreSQL possui volume persistente.
 Portas publicadas ficam restritas ao localhost. `docker compose down` mantém os dados;
 não use `down -v` se precisar preservá-los.
+
+### Rodar API, banco e front-end juntos
+
+Abra o Docker Desktop e aguarde o engine Linux iniciar. Mantenha os repositórios em pastas irmãs chamadas `back-end` e `front-end`. Se ainda não baixou os projetos:
+
+```powershell
+git clone --branch developer https://github.com/matheusmoreirap852/Teste-T-cnico-Carrinho-de-Compras-Back-end.git back-end
+git clone https://github.com/matheusmoreirap852/Teste-T-cnico-Carrinho-de-Compras-Front.git front-end
+cd back-end
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+# Configure POSTGRES_PASSWORD no .env antes da primeira inicialização.
+docker compose -f compose.yaml -f compose.frontend.yaml up --build -d
+```
+
+Se os projetos já estão baixados, execute apenas o último comando na pasta `back-end`.
+
+| Serviço | Endereço |
+|---|---|
+| Loja | http://localhost:3000 |
+| Swagger | http://localhost:8080/swagger |
+| API | http://localhost:8080/api/produtos |
+| Saúde e acesso ao banco | http://localhost:8080/health/ready |
+| PostgreSQL | localhost:5432 |
+
+O front-end é compilado no Docker e servido pelo Nginx. Requisições `/api` são encaminhadas internamente para `api:8080`, sem precisar de CORS ou configurar uma URL no código do navegador. Você não precisa instalar Node ou .NET para usar o conjunto no Docker.
+
+### Comandos do dia a dia
+
+```powershell
+# Estado dos serviços (migrate com Exited 0 é normal)
+docker compose -f compose.yaml -f compose.frontend.yaml ps -a
+
+# Logs
+docker compose -f compose.yaml -f compose.frontend.yaml logs -f api web
+
+# Atualizar após modificar o código
+docker compose -f compose.yaml -f compose.frontend.yaml up --build -d
+
+# Parar mantendo banco e containers
+docker compose -f compose.yaml -f compose.frontend.yaml stop
+
+# Remover containers mantendo o volume do banco
+docker compose -f compose.yaml -f compose.frontend.yaml down
+```
+
+### Problemas comuns
+
+- **Cannot connect / pipe dockerDesktopLinuxEngine:** abra o Docker Desktop e selecione containers Linux.
+- **POSTGRES_PASSWORD ausente:** crie `.env` a partir de `.env.example` e configure a senha.
+- **Porta ocupada:** altere apenas a porta à esquerda no Compose (ex.: `127.0.0.1:3001:80` para o front-end).
+- **Erro de login no banco após mudar a senha:** o volume existente mantém a senha de criação. Volte à senha original ou altere o usuário no PostgreSQL; editar `.env` não muda o banco já inicializado.
+- **502 no front-end:** confira `docker compose ps -a` e os logs de `api` e `migrate`. A migration deve terminar com código 0.
+
+Para EC2, esta configuração ainda precisa de domínio/HTTPS, regras de rede e gestão de segredos. As portas atuais estão vinculadas a localhost para execução local.
 
 ## Executar pelo Visual Studio ou terminal
 
@@ -121,7 +175,7 @@ O ambiente de teste tem banco próprio e API na porta 18080; não usa o volume d
 
 - Importar `produtos.json` e `cupons.json` originais, ainda não fornecidos; nenhum catálogo fictício foi criado.
 - Implementar autenticação. Os endpoints atuais ainda não exigem credenciais.
-- Integrar o front-end e configurar a política de origem se necessária.
+- Evoluir o front-end integrado: catálogo, carrinho, cupom e checkout já estão disponíveis via Nginx, sem necessidade de CORS na execução conjunta.
 - Preparar a implantação EC2 com Nginx, HTTPS, ambiente Production, segredos e backups.
 
 O Compose atual é para desenvolvimento e verificação local; não representa uma implantação EC2 concluída.
